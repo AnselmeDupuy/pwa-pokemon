@@ -5,33 +5,69 @@ const PokemonLogic = () => {
     const [pokemon, setPokemon] = useState<any>(null);
     const [description, setDescription] = useState<any>(null);
     const [number, setNumber] = useState<number>(Math.floor(Math.random() * 151) + 1);
-    const [throwNumber, setThrowNumber] = useState<number>(0 | 1 | 2 | 3);
+    const [throwNumber, setThrowNumber] = useState<0 | 1 | 2 | 3>(0);
     const [canThrow, setCanThrow] = useState<boolean>(true);
     const [team, setTeam] = useState<any>({});
+    const [pokedex, setPokedex] = useState<any[]>([]);
+    const [isShiny, setIsShiny] = useState(false);
 
     const pokeApi = new PokeApi();
 
-    // const throwPokeball = () => {
-    //     if (canThrow && throwNumber < 3) {
-    //         setThrowNumber(throwNumber + 1); 
-    //     }
-    //     return throwNumber;
-    // }
+    const capturePokemon = () => {
+        if (throwNumber < 3 && canThrow) {
+            if (checkIfPokemonInCollection(pokemon.name) === true) {
+                alert(`You already have ${pokemon.name.toUpperCase()} in your collection!`);
+                return;
+            }
+            const success = Math.random() < 0.15;
+            setThrowNumber(prev => (prev + 1) as 0 | 1 | 2 | 3);
+            if (success) {
+                alert(`Congratulations! You caught ${pokemon.name.toUpperCase()}!`);
+                addPokemonToCollection(pokemon);
+                setThrowNumber(0);
+            } else {
+                alert(`${pokemon.name.toUpperCase()} escaped! Try again.`);
+            }
+        } else if (throwNumber === 3) {    
+            alert("The pokemon flee!");
+            setNumber(generateRandomNumber());
+            setThrowNumber(0);
+        }
+    }
 
     const getPokemons = () => {
         const pokemons = localStorage.getItem("pokemons");
         return pokemons ? JSON.parse(pokemons) : { };
     };
 
+    const getPokedex = () => {
+        const pokedex = localStorage.getItem("pokedex");
+        return pokedex ? JSON.parse(pokedex) : [ ];
+    }
+
+    const savePokedex = (pokedex: any) => {
+        localStorage.setItem("pokedex", JSON.stringify(pokedex));
+    }
+
     const savePokemons = (pokemons: any) => {
-        if (checkIfPokemonInCollection(pokemon.name)) {
             localStorage.setItem("pokemons", JSON.stringify(pokemons));
-        }
     };
+
+    const addPokemonToPokedex = (pokemonName: string) => {
+        const pokedex = getPokedex();
+        if (!pokedex.includes(pokemonName)) {
+            pokedex.push(pokemonName);
+            savePokedex(pokedex);
+            setPokedex(pokedex);
+        }
+    }
 
     const checkIfPokemonInCollection = (pokemonName: string) => {
         const pokemons = getPokemons();
-        return true;;
+        if (pokemons.hasOwnProperty(pokemonName)) {
+            return true;
+        }
+        return false;
     }
 
     const addPokemonToCollection = (pokemon: any) => {
@@ -44,6 +80,7 @@ const PokemonLogic = () => {
             savePokemons(pokemons);
             setTeam(pokemons);
         }
+        addPokemonToPokedex(pokemon.name);
     }
 
     const deletePokemonFromCollection = (pokemonName: string) => {
@@ -58,14 +95,23 @@ const PokemonLogic = () => {
         return randomNum;
     }
 
+    const shinyAppearance = () => {
+        const isShiny = Math.random() < 0.001953125;
+        return isShiny;
+    }
+
     useEffect(() => {
         const pokeApi = new PokeApi();
         pokeApi.getPokemonByNumber(number).then(data => {
             setPokemon(data);
+            addPokemonToPokedex(data.name);
         });
         pokeApi.getDescriptionByNumber(number).then(data => {
             setDescription(data);
         });
+        setIsShiny(shinyAppearance());
+        setCanThrow(true);
+        setThrowNumber(0);
     }, [number]);
 
     useEffect(() => {
@@ -101,24 +147,18 @@ const PokemonLogic = () => {
                 </div>
             </div>
             <div className="sprite-container">
-                <img id="sprite" src={pokemon?.sprites.versions["generation-i"].yellow.front_default} alt="Pokemon Sprite" />
+                <img id="sprite" src={isShiny ? pokemon?.sprites.versions["generation-ii"].gold.front_shiny : pokemon?.sprites.versions["generation-ii"].gold.front_default} alt="Pokemon Sprite" />
             </div>
             <div className="description-container">
                 <p>Description: {description?.flavor_text_entries[2].flavor_text.replaceAll("\n", " ").replaceAll("\f", " ").replaceAll("\r", " ")}</p>
             </div>
 
             <div className="card-buttons">
-                {/* <button 
-                    onClick={ throwPokeball()}>Throw Pokeball ({3 - throwNumber} left)
-                </button>  */}
                 <button 
-                    onClick={ () => { addPokemonToCollection(pokemon); } }>Add to Collection
-                </button>
-                <button
-                    onClick={ () => { getPokemons(); console.log(getPokemons()); } }>View Collection
-                </button>
+                    onClick={ () => { capturePokemon() } }>Throw Pokeball
+                </button> 
                 <div className="search-pokemon">
-                    <button onClick={() => { setNumber(generateRandomNumber()) }}>Look for another pokemon</button>
+                    <button onClick={() => { setNumber(generateRandomNumber()) }}>Flee</button>
                 </div>
             </div>
 
