@@ -8,6 +8,7 @@ const PokemonLogic = () => {
     const [throwNumber, setThrowNumber] = useState<0 | 1 | 2 | 3>(0);
     const [canThrow, setCanThrow] = useState<boolean>(true);
     const [team, setTeam] = useState<any>({});
+    const [favorites, setFavorites] = useState<any>({});
     const [pokedex, setPokedex] = useState<any[]>([]);
     const [isShiny, setIsShiny] = useState(false);
 
@@ -24,6 +25,7 @@ const PokemonLogic = () => {
             if (success) {
                 alert(`Congratulations! You caught ${pokemon.name.toUpperCase()}!`);
                 addPokemonToCollection(pokemon);
+                setNumber(generateRandomNumber());
                 setThrowNumber(0);
             } else {
                 alert(`${pokemon.name.toUpperCase()} escaped! Try again.`);
@@ -74,7 +76,7 @@ const PokemonLogic = () => {
         const pokemons = getPokemons();
         pokemons[pokemon.name] = pokemon.id;
         if (Object.keys(pokemons).length > 6) {
-            alert("You can only have 6 Pokémon in your collection, you must delete one to add another.");
+            alert("You can only have 6 Pokémon in your collection, too bad! the pokemon flees.");
             return;
         } else {
             savePokemons(pokemons);
@@ -88,6 +90,34 @@ const PokemonLogic = () => {
         delete pokemons[pokemonName];
         savePokemons(pokemons);
         setTeam(pokemons);
+    }
+
+    const getFavorites = () => {
+        const favorites = localStorage.getItem("favorites");
+        return favorites ? JSON.parse(favorites) : [];
+    };
+
+    const addPokemonToFavorites = (pokemonName: string) => {
+        const favorites = localStorage.getItem("favorites");
+        let favoritesArray = favorites ? JSON.parse(favorites) : [];
+        if (!favoritesArray.includes(pokemonName)) {
+            alert(`${pokemonName.toUpperCase()} has been added to favorites.`);
+            favoritesArray.push(pokemonName);
+            localStorage.setItem("favorites", JSON.stringify(favoritesArray));
+            setFavorites(favoritesArray);
+        } else if (favoritesArray.includes(pokemonName)) {
+            alert(`${pokemonName.toUpperCase()} has been removed from favorites.`);
+            favoritesArray = favoritesArray.filter((name: string) => name !== pokemonName);
+            localStorage.setItem("favorites", JSON.stringify(favoritesArray));
+            setFavorites(favoritesArray);
+        }
+    }
+
+    const deletePokemonFromFavorites = (pokemonName: string) => {
+        const favoritesArray: string[] = getFavorites();
+        const next = favoritesArray.filter((name: string) => name !== pokemonName);
+        localStorage.setItem("favorites", JSON.stringify(next));
+        setFavorites(next);
     }
 
     const generateRandomNumber = () => {
@@ -116,6 +146,8 @@ const PokemonLogic = () => {
 
     useEffect(() => {
         setTeam(getPokemons());
+        setFavorites(getFavorites());
+        setPokedex(getPokedex());
     }, []);
 
     
@@ -168,28 +200,64 @@ const PokemonLogic = () => {
             {team && Object.keys(team).length > 0 ? (
                 <ul>
                     {Object.entries(team).map(([name, id]) => (
-                        <li key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                        <li key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
                             <span>{(name as string).toUpperCase()} (N°{id as number})</span>
-                            <button
-                                aria-label={`Remove ${name} from team`}
-                                title="Remove"
-                                onClick={() => { deletePokemonFromCollection(name as string); }}
-                                style={{
-                                    border: 'none',
-                                    background: 'transparent',
-                                    color: '#c00',
-                                    cursor: 'pointer',
-                                    fontSize: '18px',
-                                    lineHeight: 1,
-                                }}
-                            >
-                                &times;
-                            </button>
+                            <div>
+                                <button 
+                                    aria-label={`Add ${name} to favorites`}
+                                    title="Add to Favorites"
+                                    onClick={() => { addPokemonToFavorites(name as string); }}
+                                    >Fav</button>
+                                <button
+                                    aria-label={`Remove ${name} from team`}
+                                    title="Remove"
+                                    onClick={() => { deletePokemonFromCollection(name as string); }}
+                                    style={{
+                                        border: 'none',
+                                        background: 'transparent',
+                                        color: '#c00',
+                                        cursor: 'pointer',
+                                        fontSize: '18px',
+                                        lineHeight: 1,
+                                    }}
+                                >
+                                    &times;
+                                </button>
+                            </div>
                         </li>
                     ))}
                 </ul>
             ) : (
                 <p>No Pokémon in your collection yet.</p>
+            )}
+            <h2>Your Favorites</h2>
+            {Array.isArray(favorites) && favorites.length > 0 ? (
+                <ul>
+                    {favorites.map((name: string) => (
+                        <li key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span>{name.toUpperCase()}</span>
+                            <div>
+                                <button
+                                    aria-label={`Remove ${name} from favorites`}
+                                    title="Remove"
+                                    onClick={() => { deletePokemonFromFavorites(name); }}
+                                    style={{
+                                        border: 'none',
+                                        background: 'transparent',
+                                        color: '#c00',
+                                        cursor: 'pointer',
+                                        fontSize: '18px',
+                                        lineHeight: 1,
+                                    }}
+                                >
+                                    &times;
+                                </button>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <p>No Pokémon in your Favorites yet.</p>
             )}
         </div>
 
