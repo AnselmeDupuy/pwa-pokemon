@@ -1,5 +1,6 @@
 import './App.css'
 import PokemonLogic from './logic/PokemonLogic'
+import { NotificationManager } from './NotificationManager'
 
 
 function App() {
@@ -7,6 +8,7 @@ function App() {
   return (
     <>
       <PokemonLogic />
+      <NotificationManager />
     </>
   )
 }

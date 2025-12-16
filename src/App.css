@@ -50,12 +50,13 @@
 
 .game-window {
   display: flex;
+  flex-direction: column;
 }
 
 .Team {
   border: 1px solid #ccc;
-  width: 30%;
-  margin-left: 5%;
+  width: 65%;
+  margin-left: 17.5%;
 }
 
 .pokemon-card {
