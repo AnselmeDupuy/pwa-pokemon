@@ -1,5 +1,6 @@
 import { useEffect, useState, } from "react";
 import { PokeApi } from "../classes/PokeApi";
+import { Push } from "../classes/Push";
 
 const PokemonLogic = () => {
     const [pokemon, setPokemon] = useState<any>(null);
@@ -11,8 +12,9 @@ const PokemonLogic = () => {
     const [favorites, setFavorites] = useState<any>({});
     const [pokedex, setPokedex] = useState<any[]>([]);
     const [isShiny, setIsShiny] = useState(false);
+    const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(Notification.permission);
 
-    const pokeApi = new PokeApi();
+    const notif = new Push();
 
     const capturePokemon = () => {
         if (throwNumber < 3 && canThrow) {
@@ -73,14 +75,29 @@ const PokemonLogic = () => {
     }
 
     const addPokemonToCollection = (pokemon: any) => {
+        notif.askPermission();
         const pokemons = getPokemons();
-        pokemons[pokemon.name] = pokemon.id;
+        pokemons[pokemon.id] = { name: pokemon.name, isShiny: isShiny };
         if (Object.keys(pokemons).length > 6) {
             alert("You can only have 6 Pokémon in your collection, too bad! the pokemon flees.");
             return;
         } else {
             savePokemons(pokemons);
             setTeam(pokemons);
+            if (isShiny) {
+                notif.sendNotification(
+                    "Shiny Pokémon Caught!",
+                    `You have successfully caught a shiny ${pokemon.name.toUpperCase()}! ✨`,
+                    `shiny-catch-${pokemon.id}`
+                );
+            } else  {
+                notif.sendNotification(
+                "Pokémon Caught!",
+                `You have successfully caught ${pokemon.name.toUpperCase()}!`,
+                `catch-${pokemon.id}`
+                );
+            }
+
         }
         addPokemonToPokedex(pokemon.name);
     }
@@ -135,11 +152,21 @@ const PokemonLogic = () => {
         pokeApi.getPokemonByNumber(number).then(data => {
             setPokemon(data);
             addPokemonToPokedex(data.name);
+
+            const shiny = shinyAppearance();
+            setIsShiny(shiny);
+        
+            if (shiny) {
+                notif.sendNotification(
+                    "A wild Shiny Pokémon appeared!",
+                    `A shiny ${data.name.toUpperCase()} has appeared! ✨`,
+                    `shiny-appear-${number}`
+                );
+            }
         });
         pokeApi.getDescriptionByNumber(number).then(data => {
             setDescription(data);
         });
-        setIsShiny(shinyAppearance());
         setCanThrow(true);
         setThrowNumber(0);
     }, [number]);
@@ -158,6 +185,7 @@ const PokemonLogic = () => {
         <div className="pokemon-card">
             <div className="card-head">
                 <p>N°{number} {pokemon?.name.toUpperCase()}</p>
+                { isShiny && (<span className="shiny-badge">✨ Shiny ✨</span>) }
                 <div className="types-container">
                 {pokemon?.types?.map((typeInfo: any) => {
                     const typeName = typeInfo.type.name as string;
@@ -197,39 +225,42 @@ const PokemonLogic = () => {
         </div>
         <div className="Team">
             <h2>Your Team</h2>
-            {team && Object.keys(team).length > 0 ? (
-                <ul>
-                    {Object.entries(team).map(([name, id]) => (
-                        <li key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                            <span>{(name as string).toUpperCase()} (N°{id as number})</span>
-                            <div>
-                                <button 
-                                    aria-label={`Add ${name} to favorites`}
-                                    title="Add to Favorites"
-                                    onClick={() => { addPokemonToFavorites(name as string); }}
-                                    >Fav</button>
-                                <button
-                                    aria-label={`Remove ${name} from team`}
-                                    title="Remove"
-                                    onClick={() => { deletePokemonFromCollection(name as string); }}
-                                    style={{
-                                        border: 'none',
-                                        background: 'transparent',
-                                        color: '#c00',
-                                        cursor: 'pointer',
-                                        fontSize: '18px',
-                                        lineHeight: 1,
-                                    }}
-                                >
-                                    &times;
-                                </button>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            ) : (
-                <p>No Pokémon in your collection yet.</p>
-            )}
+{team && Object.keys(team).length > 0 ? (
+    <ul>
+        {Object.entries(team).map(([id, data]: [string, any]) => (
+            <li key={id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                <span>
+                    {data.name.toUpperCase()} (N°{id})
+                    {data.isShiny && ' ✨'}
+                </span>
+                <div>
+                    <button 
+                        aria-label={`Add ${data.name} to favorites`}
+                        title="Add to Favorites"
+                        onClick={() => { addPokemonToFavorites(data.name); }}
+                        >Fav</button>
+                    <button
+                        aria-label={`Remove ${data.name} from team`}
+                        title="Remove"
+                        onClick={() => { deletePokemonFromCollection(id); }}
+                        style={{
+                            border: 'none',
+                            background: 'transparent',
+                            color: '#c00',
+                            cursor: 'pointer',
+                            fontSize: '18px',
+                            lineHeight: 1,
+                        }}
+                    >
+                        &times;
+                    </button>
+                </div>
+            </li>
+        ))}
+    </ul>
+) : (
+    <p>No Pokémon in your collection yet.</p>
+)}
             <h2>Your Favorites</h2>
             {Array.isArray(favorites) && favorites.length > 0 ? (
                 <ul>
